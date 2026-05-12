@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>แบบคำนวณมอเตอร์อัตโนมัติ</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0b0f1a;
+  --s1: #111827;
+  --s2: #1a2234;
+  --s3: #1f2d44;
+  --border: #253350;
+  --border2: #1e2d47;
+  --accent: #3b82f6;
+  --accent-dim: rgba(59,130,246,0.15);
+  --green: #10b981;
+  --green-dim: rgba(16,185,129,0.12);
+  --yellow: #f59e0b;
+  --red: #ef4444;
+  --purple: #8b5cf6;
+  --cyan: #06b6d4;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --input: #0d1626;
+  --blue-in: rgba(59,130,246,0.08);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'Sarabun',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+  background-image: radial-gradient(circle at 20% 15%, rgba(59,130,246,0.05) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 85%, rgba(139,92,246,0.04) 0%, transparent 50%); }
+.wrap { position:relative; z-index:1; max-width:1400px; margin:0 auto; padding:24px 18px; }
+
+/* TOP */
+.topbar { display:flex; align-items:center; gap:14px; background:var(--s1); border:1px solid var(--border); border-radius:14px; padding:16px 22px; margin-bottom:20px; }
+.ticon { width:46px; height:46px; border-radius:12px; background:linear-gradient(135deg,#1d4ed8,#7c3aed); display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0; box-shadow:0 0 20px rgba(59,130,246,0.3); }
+.topbar h1 { font-size:21px; font-weight:800; letter-spacing:-0.5px; }
+.topbar p { font-size:12px; color:var(--text2); margin-top:2px; }
+.tags { margin-left:auto; display:flex; gap:8px; }
+.tag { font-size:10.5px; font-weight:700; padding:4px 11px; border-radius:20px; letter-spacing:0.5px; }
+.tag.blue { background:var(--accent-dim); border:1px solid rgba(59,130,246,0.3); color:var(--accent); }
+.tag.green { background:var(--green-dim); border:1px solid rgba(16,185,129,0.3); color:var(--green); }
+
+/* GRID */
+.grid { display:grid; grid-template-columns:350px 1fr; gap:18px; }
+
+/* CARD */
+.card { background:var(--s1); border:1px solid var(--border); border-radius:13px; overflow:hidden; }
+.chead { display:flex; align-items:center; gap:10px; padding:13px 17px; background:var(--s2); border-bottom:1px solid var(--border2); }
+.chead .ic { width:26px; height:26px; border-radius:7px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.chead h2 { font-size:13px; font-weight:700; }
+.cbody { padding:16px; }
+
+/* SECTION LABEL */
+.slbl { font-size:10px; font-weight:800; letter-spacing:2px; text-transform:uppercase; color:var(--accent); margin-bottom:11px; margin-top:2px; display:flex; align-items:center; gap:8px; }
+.slbl::after { content:''; flex:1; height:1px; background:var(--border2); }
+
+/* INPUT */
+.irow { display:grid; grid-template-columns:128px 1fr 52px; align-items:center; gap:7px; margin-bottom:9px; }
+.irow label { font-size:12.5px; color:var(--text2); font-weight:500; }
+.irow input, .irow select { background:var(--input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--text); outline:none; width:100%; transition:border-color .15s, box-shadow .15s; }
+.irow input:focus, .irow select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,130,246,0.12); }
+.irow input.bin { background:var(--blue-in); border-color:rgba(59,130,246,0.3); color:#93c5fd; }
+.irow select option { background:#1a2234; }
+.irow .unit { font-size:11.5px; color:var(--text3); font-family:'IBM Plex Mono',monospace; }
+.divider { height:1px; background:var(--border2); margin:12px 0; }
+
+/* CURRENT BOX */
+.curbox { background:linear-gradient(135deg,rgba(16,185,129,0.09),rgba(6,182,212,0.06)); border:1px solid rgba(16,185,129,0.22); border-radius:9px; padding:13px 15px; margin-top:12px; }
+.curbox .cl { font-size:10.5px; color:var(--green); font-weight:700; letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
+.curbox .vrow { display:flex; align-items:baseline; gap:7px; }
+.curbox .big { font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; color:#fff; }
+.curbox .u2 { font-size:13px; color:var(--text2); }
+.curbox .sub { font-size:11px; color:var(--text2); margin-top:4px; line-height:1.5; }
+
+/* CABLE PICK */
+.cpicks { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.cpick { background:var(--s2); border:1.5px solid var(--border); border-radius:8px; padding:9px 8px; text-align:center; font-size:11.5px; font-weight:700; cursor:pointer; color:var(--text2); transition:all .15s; user-select:none; }
+.cpick.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+.cpick:hover:not(.active) { border-color:var(--border2); color:var(--text); }
+
+/* CALC BTN */
+.cbtn { width:100%; padding:11px; background:linear-gradient(135deg,#1d4ed8,#7c3aed); border:none; border-radius:9px; color:#fff; font-family:'Sarabun',sans-serif; font-size:14.5px; font-weight:700; cursor:pointer; margin-top:14px; display:flex; align-items:center; justify-content:center; gap:7px; transition:opacity .15s,transform .1s; box-shadow:0 4px 18px rgba(59,130,246,0.22); }
+.cbtn:hover { opacity:.9; transform:translateY(-1px); }
+.cbtn:active { transform:translateY(0); }
+
+/* RIGHT */
+.rcol { display:flex; flex-direction:column; gap:16px; }
+
+/* PRICE CARDS */
+.pcards { display:grid; grid-template-columns:repeat(4,1fr); gap:9px; padding:14px 16px; }
+.pcard { border-radius:9px; padding:13px; border:1.5px solid var(--border); background:var(--s2); cursor:pointer; transition:all .15s; position:relative; overflow:hidden; }
+.pcard::before { content:''; position:absolute; top:0;left:0;right:0;height:2.5px; }
+.pcard.c-vct::before { background:var(--red); }
+.pcard.c-cv::before  { background:var(--green); }
+.pcard.c-nyy::before { background:var(--yellow); }
+.pcard.c-thw::before { background:var(--purple); }
+.pcard.sel { border-color:var(--accent); background:rgba(59,130,246,0.07); }
+.pcard:hover:not(.sel) { background:var(--s3); }
+.pcard .pt { font-size:9.5px; font-weight:800; color:var(--text3); letter-spacing:1px; text-transform:uppercase; margin-bottom:5px; }
+.pcard .pv { font-family:'IBM Plex Mono',monospace; font-size:17px; font-weight:700; color:var(--text); }
+.pcard .pv.err { font-size:11px; color:var(--red); }
+.pcard .ps { font-size:10px; color:var(--text3); margin-top:3px; }
+.pcard .psel { font-size:9px; font-weight:700; color:var(--accent); margin-top:3px; display:none; }
+.pcard.sel .psel { display:block; }
+.pcard .cheap { position:absolute;top:7px;right:7px;background:var(--green);color:#000;font-size:8px;font-weight:800;padding:2px 5px;border-radius:3px;display:none; }
+.pcard.cheap-flag .cheap { display:block; }
+
+/* BARS */
+.bars { display:flex;align-items:flex-end;gap:9px;height:72px;padding:0 16px;margin-top:6px; }
+.bwrap { flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end; }
+.bar { width:100%;border-radius:4px 4px 0 0;min-height:3px;transition:height .5s cubic-bezier(.34,1.56,.64,1); }
+.blbl { font-size:9.5px;color:var(--text3);font-family:'IBM Plex Mono',monospace; }
+
+/* NOTICE */
+.notice { margin:0 16px 14px;background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.18);border-radius:7px;padding:9px 13px;font-size:11.5px;color:var(--yellow);display:flex;gap:7px; }
+.disc { font-size:11px;color:var(--red);text-align:center;padding:11px 16px;border-top:1px solid var(--border2); }
+
+/* TABLES */
+.rtable { width:100%;border-collapse:collapse;font-size:12.5px; }
+.rtable thead th { background:var(--s2);padding:8px 13px;text-align:left;font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:0.7px;border-bottom:1px solid var(--border); }
+.rtable tbody tr:hover td { background:rgba(255,255,255,0.02); }
+.rtable td { padding:8px 13px;border-bottom:1px solid rgba(37,51,80,0.35);vertical-align:middle; }
+.rtable tr:last-child td { border-bottom:none; }
+.rn { color:var(--text2); }
+.rm { font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--cyan);font-weight:500; }
+.ru { font-size:11px;color:var(--text3);font-family:'IBM Plex Mono',monospace; }
+.rp { font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--green);font-weight:600;text-align:right; }
+.rp.err { color:var(--red); }
+.rsec td { background:var(--s2);padding:5px 13px; }
+.rslbl { font-size:9.5px;font-weight:800;letter-spacing:1.5px;color:var(--yellow);text-transform:uppercase; }
+
+.boqt { width:100%;border-collapse:collapse;font-size:12px; }
+.boqt th { background:var(--s2);padding:8px 11px;font-size:10.5px;font-weight:700;color:var(--text3);letter-spacing:0.5px;text-align:left;border-bottom:1px solid var(--border); }
+.boqt td { padding:8px 11px;border-bottom:1px solid rgba(37,51,80,0.35); }
+.boqt tr:last-child td { border-bottom:none; }
+.bd { color:var(--text); }
+.bn { font-family:'IBM Plex Mono',monospace;color:var(--text2);text-align:right; }
+.bp { font-family:'IBM Plex Mono',monospace;color:var(--green);font-weight:600;text-align:right; }
+.bt { font-family:'IBM Plex Mono',monospace;color:#fff;font-weight:700;text-align:right; }
+.bsub td { background:var(--s2); }
+.bsum td { background:rgba(16,185,129,0.07);border-top:1px solid rgba(16,185,129,0.18); }
+
+.ph { padding:36px 20px;text-align:center;color:var(--text3);font-size:13px; }
+
+@keyframes fu { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)} }
+.card { animation:fu .3s ease both; }
+
+@media(max-width:900px){
+  .grid{grid-template-columns:1fr}
+  .pcards{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="topbar">
+  <div class="ticon">⚡</div>
+  <div>
+    <h1>แบบคำนวณมอเตอร์อัตโนมัติ</h1>
+    <p>อ้างอิงตารางราคาจริงจาก Excel · Motor Sizing &amp; Cable Selection Calculator</p>
+  </div>
+  <div class="tags">
+    <span class="tag blue">DOL</span>
+    <span class="tag green">STAR-DELTA</span>
+  </div>
+</div>
+
+<div class="grid">
+
+<!-- LEFT -->
+<div>
+  <div class="card">
+    <div class="chead">
+      <div class="ic" style="background:rgba(59,130,246,0.15)">⚙️</div>
+      <h2>ข้อมูลมอเตอร์</h2>
+    </div>
+    <div class="cbody">
+      <div class="slbl">พารามิเตอร์หลัก</div>
+      <div class="irow">
+        <label>มอเตอร์ (kW)</label>
+        <input type="number" id="kw" value="160" class="bin" min="0.06" step="0.1">
+        <span class="unit">kW</span>
+      </div>
+      <div class="irow">
+        <label>ระยะสาย</label>
+        <input type="number" id="dist" value="100" class="bin" min="1">
+        <span class="unit">m</span>
+      </div>
+      <div class="irow">
+        <label>รูปแบบต่อ</label>
+        <select id="mode">
+          <option value="dol">DOL (Direct On Line)</option>
+          <option value="sd" selected>STAR-DELTA</option>
+        </select>
+        <span class="unit"></span>
+      </div>
+      <div class="irow">
+        <label>Overload</label>
+        <select id="oltype">
+          <option value="thermal">Thermal</option>
+          <option value="electronic">Electronic</option>
+        </select>
+        <span class="unit">EA</span>
+      </div>
+
+      <div class="divider"></div>
+      <div class="slbl">ค่าไฟฟ้า</div>
+      <div class="irow">
+        <label>แรงดัน (V)</label>
+        <input type="number" id="voltage" value="400" class="bin">
+        <span class="unit">V</span>
+      </div>
+      <div class="irow">
+        <label>Power Factor</label>
+        <input type="number" id="pf" value="0.9" class="bin" step="0.01" min="0.1" max="1">
+        <span class="unit">pF</span>
+      </div>
+      <div class="irow">
+        <label>Efficiency</label>
+        <input type="number" id="eff" value="0.9" class="bin" step="0.01" min="0.1" max="1">
+        <span class="unit">EFF</span>
+      </div>
+
+      <div class="curbox">
+        <div class="cl">🔌 กระแสเต็มพิกัด (Full Load Current)</div>
+        <div class="vrow"><span class="big" id="cur">—</span><span class="u2">A</span></div>
+        <div class="sub" id="cursub">กรอกข้อมูลแล้วกดคำนวณ</div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="slbl">เลือกประเภทสาย (BOQ)</div>
+      <div class="cpicks" id="cpicks">
+        <div class="cpick" data-v="vct">สาย VCT</div>
+        <div class="cpick active" data-v="cv">สาย CV+THW(G)</div>
+        <div class="cpick" data-v="nyy">สาย NYY</div>
+        <div class="cpick" data-v="thw">สาย THW</div>
+      </div>
+
+      <button class="cbtn" onclick="calculate()">⚡ คำนวณ</button>
+    </div>
+    <div class="disc">*** ราคา ณ วันที่ 5/7/69 อาจมีการเปลี่ยนแปลง ***</div>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="rcol">
+
+  <div class="card">
+    <div class="chead">
+      <div class="ic" style="background:rgba(16,185,129,0.15)">💰</div>
+      <h2>สรุปราคาสายและท่อ (บาท) — เปรียบเทียบทุกประเภท</h2>
+    </div>
+    <div class="pcards">
+      <div class="pcard c-vct" id="pc-vct" onclick="pickCable('vct')">
+        <div class="pt">VCT3/C-G</div>
+        <div class="pv err" id="pv-vct">—</div>
+        <div class="ps">สายและท่อ VCT</div>
+        <div class="psel">✓ เลือก BOQ</div>
+        <div class="cheap">ถูกสุด</div>
+      </div>
+      <div class="pcard c-cv sel" id="pc-cv" onclick="pickCable('cv')">
+        <div class="pt">CV+THW(G)</div>
+        <div class="pv" id="pv-cv">—</div>
+        <div class="ps">สายและท่อ CV</div>
+        <div class="psel">✓ เลือก BOQ</div>
+        <div class="cheap">ถูกสุด</div>
+      </div>
+      <div class="pcard c-nyy" id="pc-nyy" onclick="pickCable('nyy')">
+        <div class="pt">NYY3/C-G</div>
+        <div class="pv" id="pv-nyy">—</div>
+        <div class="ps">สายและท่อ NYY</div>
+        <div class="psel">✓ เลือก BOQ</div>
+        <div class="cheap">ถูกสุด</div>
+      </div>
+      <div class="pcard c-thw" id="pc-thw" onclick="pickCable('thw')">
+        <div class="pt">THW</div>
+        <div class="pv" id="pv-thw">—</div>
+        <div class="ps">สายและท่อ THW</div>
+        <div class="psel">✓ เลือก BOQ</div>
+        <div class="cheap">ถูกสุด</div>
+      </div>
+    </div>
+    <div class="bars">
+      <div class="bwrap"><div class="bar" id="b-vct" style="background:#ef4444;height:0"></div><div class="blbl">VCT</div></div>
+      <div class="bwrap"><div class="bar" id="b-cv"  style="background:#10b981;height:0"></div><div class="blbl">CV</div></div>
+      <div class="bwrap"><div class="bar" id="b-nyy" style="background:#f59e0b;height:0"></div><div class="blbl">NYY</div></div>
+      <div class="bwrap"><div class="bar" id="b-thw" style="background:#8b5cf6;height:0"></div><div class="blbl">THW</div></div>
+    </div>
+    <div class="notice" style="margin-top:10px">
+      <span>⚠️</span>
+      <span>ยังไม่รวมราคามอเตอร์ คอนแทคเตอร์ และค่าแรง — ราคาสายและท่อตามระยะที่ระบุเท่านั้น</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <div class="ic" style="background:rgba(6,182,212,0.15)">📋</div>
+      <h2>รายการอุปกรณ์</h2>
+    </div>
+    <div id="comp-area"><div class="ph">กดปุ่ม "คำนวณ" เพื่อดูรายการอุปกรณ์</div></div>
+  </div>
+
+  <div class="card">
+    <div class="chead">
+      <div class="ic" style="background:rgba(245,158,11,0.15)">📄</div>
+      <h2>BOQ — Bill of Quantity</h2>
+    </div>
+    <div id="boq-area"><div class="ph">คำนวณก่อนเพื่อดู BOQ</div></div>
+  </div>
+
+</div>
+</div>
+</div>
+
+<script>
+// =====================================================================
+// DATA — อ้างอิงจาก Excel แบบคำนวณมอเตอร์.xlsx (DOL sheet & Star-Delta sheet)
+// DOL columns: [kW, HP, A, cont_m, cont_p, olT_m, olT_p, olE_m, olE_p,
+//   vct_s, vct_p, cv_s, cv_p, nyy_s, nyy_p, thw_s, thw_p,
+//   cVct_s, cVct_p, cCv_s, cCv_p, cNyy_s, cNyy_p, cThw_s, cThw_p]
+const DOL=[
+[0.06,0.083,0.2,'AF09-30-10',1020,'TF42-0.23',1340,'EF19-0.32',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[0.09,0.125,0.3,'AF09-30-10',1020,'TF42-0.31',1340,'EF19-0.32',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[0.12,0.167,0.44,'AF09-30-10',1020,'TF42-0.55',1340,'EF19-1.0',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[0.25,0.333,0.85,'AF09-30-10',1020,'TF42-1.0',1340,'EF19-1.0',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[0.37,0.5,1.1,'AF09-30-10',1020,'TF42-1.3',1340,'EF19-2.7',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[0.55,0.75,1.5,'AF09-30-10',1020,'TF42-1.7',1340,'EF19-2.7',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[0.75,1,1.9,'AF09-30-10',1020,'TF42-2.3',1340,'EF19-2.7',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[1.1,1.5,2.7,'AF09-30-10',1020,'TF42-3.1',1340,'EF19-2.7',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[1.5,2,3.6,'AF09-30-10',1020,'TF42-4.2',1340,'EF19-6.3',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[2.2,3,4.9,'AF09-30-10',1020,'TF42-5.7',1340,'EF19-6.3',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[3,4,6.5,'AF09-30-10',1020,'TF42-7.6',1340,'EF19-18.9',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[4,5.5,8.5,'AF09-30-10',1020,'TF42-7.6',1340,'EF19-18.9',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[5.5,7.5,11.5,'AF12-30-10',1230,'TF42-13',1490,'EF19-18.9',5560,'3x2.5/2.5',120,'3x2.5/2.5',111,'3x2.5/2.5',111,'3x2.5/2.5',72,'0.75"',263,'1"',362,'1"',362,'0.5"',198],
+[7.5,10,15.5,'AF16-30-10',1760,'TF42-16',1750,'EF19-18.9',5560,'3x4/4',167,'3x2.5/2.5',111,'3x4/4',163,'3x4/2.5',102,'1"',362,'1"',362,'1"',362,'0.5"',198],
+[11,15,22,'AF26-30-11',2550,'TF42-24',1750,'EF45-30',8180,'3x6/6',250,'3x4/2.5',139,'3x6/6',237,'3x6/2.5',132,'1.25"',468,'1.25"',468,'1.25"',468,'0.75"',263],
+[15,20,29,'AF30-30-11',3170,'TF42-35',2160,'EF45-30',8180,'3x10/10',436,'3x6/4',199,'3x10/10',359,'3x10/4',223,'1.5"',575,'1.25"',468,'1.25"',468,'0.75"',263],
+[18.5,25,35,'AF38-30-11',4460,'TF42-38',2160,'EF45-45',9840,'3x16/16',630,'3x10/4',259,'3x16/16',563,'3x10/4',223,'1.5"',575,'1.25"',468,'1.5"',575,'0.75"',263],
+[22,30,41,'AF52-30-11',5700,'TF65-47',3110,'EF65-56',13740,'3x16/16',630,'3x10/4',259,'3x16/16',563,'3x16/4',343,'1.5"',575,'1.25"',468,'1.5"',575,'1"',362],
+[30,40,55,'AF65-30-11',7110,'TF65-60',3900,'EF65-56',13740,'3x25/16',935,'3x16/6',393,'3x25/16',759,'3x25/6',535,'2"',786,'1.5"',575,'2"',786,'1.25"',468],
+[37,50,66,'AF80-30-11',7880,'TF96-68',4620,'EF96-100',15870,'3x35/16',1287,'3x25/6',585,'3x35/16',1110,'3x35/6',685,'2.5"',1269,'2"',786,'2"',786,'1.25"',468],
+[45,60,80,'AF96-30-11',9250,'TF96-87',4990,'EF96-100',15870,'-',null,'3x35/10',750,'3x50/25',1445,'3x50/10',914,'-',null,'2"',786,'2.5"',1269,'1.5"',575],
+[55,75,97,'AF116-30-11',12500,'TF140DU-110',7460,'EF146-150',19420,'-',null,'3x50/10',987,'3x70/35',2020,'3x70/10',1268,'-',null,'2.5"',1269,'2.5"',1269,'2"',786],
+[75,100,132,'AF140-30-11',18330,'TF140DU-142',10660,'EF146-150',19420,'-',null,'3x70/16',1406,'3x120/70',3546,'3x95/16',1764,'-',null,'2.5"',1269,'3"',1571,'2"',786],
+[90,125,160,'AF190-30-11',23820,'TA200DU175',10230,'EF205-210',26010,'-',null,'3x95/16',1884,'2(3x50/25)',2890,'2(3x50)/16',1803,'-',null,'3"',1571,'4"',2075,'2.5"',1269],
+[110,150,195,'AF205-30-11',27580,'TA200DU200',16350,'EF205-210',26010,'-',null,'2(3x50)/16',1949,'3(3x50/25)',4335,'2(3x70)/16',2511,'-',null,'3"',1571,'200mm',3189,'2.5"',1269],
+[132,180,230,'AF265-30-11',42520,'-',null,'EF370-380',28950,'-',null,'2(3x70)/25',2767,'4(3x50/25)',5780,'2(3x70)/25',2571,'-',null,'3.5"',1807,'200mm',3189,'2.5"',1269],
+[160,220,280,'AF305-30-11',47100,'-',null,'EF370-380',28950,'-',null,'3(3x50)/25',2931,'4(3x70/35)',8080,'2(3x95)/25',5304,'-',null,'3.5"',1807,'300mm',3830,'3"',1571],
+[200,270,350,'AF370-30-11',53410,'-',null,'EF370-380',28950,'-',null,'3(3x70)/25',4065,'4(3x95/50)',11132,'3(3x95)/25',5304,'-',null,'4"',2075,'300mm',3830,'3.5"',1807],
+[250,340,430,'AF460-30-11',71160,'-',null,'EF460-500',37340,'-',null,'3(3x95)/35',5559,'4(3x120/70)',14184,'3(3x120)/35',6711,'-',null,'200mm',3189,'300mm',3830,'4"',2075],
+[315,430,540,'AF580-30-11',97790,'-',null,'EF750-800',48550,'-',null,'3(3x150)/50',8644,'4(3x185/95)',21612,'3(3x185)/50',10327,'-',null,'200mm',3189,'400mm',4401,'300mm',3830],
+[355,480,610,'AF750-30-11',157060,'-',null,'EF750-800',48550,'-',null,'3(3x185)/50',10774,'4(3x240/120)',28488,'3(3x240)/50',13117,'-',null,'200mm',3189,'400mm',4401,'400mm',4401],
+[400,545,690,'AF750-30-11',157060,'-',null,'EF750-800',48550,'-',null,'3(3x240)/50',13975,'4(3x300/150)',35284,'3(3x300)/50',16204,'-',null,'300mm',3830,'400mm',4401,'400mm',4401],
+];
+
+// STAR-DELTA: [kW,HP,A, km1m,km1p, km3m,km3p, km2m,km2p, olTm,olTp, olEm,olEp,
+//   vct_s,vct_p, cv_s,cv_p, nyy_s,nyy_p, thw_s,thw_p,
+//   cVct_s,cVct_p, cCv_s,cCv_p, cNyy_s,cNyy_p, cThw_s,cThw_p]
+const SD=[
+[4,5.5,8.5,'AF09-30-10',1020,'AF09-30-10',1020,'AF09-30-10',1020,'TF42-5.7',1340,'-',null,'2(3x2.5/2.5)',240,'2(3x2.5)/2.5',204,'2(3x2.5/2.5)',222,'6x2.5/2.5',126,'1.5"',575,'1.25"',468,'2"',786,'3/4"',263],
+[5.5,7.5,11.5,'AF09-30-10',1020,'AF09-30-10',1020,'AF09-30-10',1020,'TF42-7.6',1340,'-',null,'2(3x2.5/2.5)',240,'2(3x2.5)/2.5',204,'2(3x2.5/2.5)',222,'6x2.5/2.5',126,'1.5"',575,'1.25"',468,'2"',786,'3/4"',263],
+[7.5,10,15.5,'AF09-30-10',1020,'AF09-30-10',1020,'AF09-30-10',1020,'TF42-10',1340,'-',null,'2(3x2.5/2.5)',240,'2(3x2.5)/2.5',204,'2(3x2.5/2.5)',222,'6x2.5/2.5',126,'1.5"',575,'1.25"',468,'2"',786,'3/4"',263],
+[11,15,22,'AF12-30-10',1230,'AF12-30-10',1230,'AF09-30-10',1020,'TF42-13',1490,'-',null,'2(3x4/4)',334,'2(3x2.5)/4',214,'2(3x4/4)',326,'6x4/4',196,'2"',786,'1.25"',468,'2"',786,'3/4"',263],
+[15,20,29,'AF16-30-10',1760,'AF16-30-10',1760,'AF12-30-10',1230,'TF42-20',1750,'-',null,'2(3x6/6)',500,'2(3x4)/4',270,'2(3x6/6)',474,'6x6/4',268,'2"',786,'1.25"',468,'2"',786,'1"',362],
+[18.5,25,35,'AF26-30-11',2550,'AF26-30-11',2550,'AF26-30-11',2550,'TF42-24',1750,'-',null,'2(3x10/10)',872,'2(3x4)/4',270,'2(3x10/10)',718,'6x10/4',418,'2.5"',1269,'1.25"',468,'2.5"',1269,'1.25"',468],
+[22,30,41,'AF26-30-11',2550,'AF26-30-11',2550,'AF26-30-11',2550,'TF42-24',1750,'-',null,'2(3x10/10)',872,'2(3x6)/6',382,'2(3x10/10)',718,'6x10/6',430,'2.5"',1269,'1.5"',575,'2.5"',1269,'1.25"',468],
+[25,34,47,'AF30-30-11',3170,'AF30-30-11',3170,'AF26-30-11',2550,'TF42-29',2160,'-',null,'2(3x16/16)',1260,'2(3x10)/6',502,'2(3x16/16)',1126,'6x10/6',430,'3"',1571,'1.5"',575,'3"',1571,'1.25"',468],
+[37,50,66,'AF40-30-11',5470,'AF40-30-11',5470,'AF40-30-11',5470,'TF65-40',3110,'-',null,'2(3x25/16)',1870,'2(3x16)/6',746,'2(3x25/16)',1518,'6x25/6',1030,'3.5"',1807,'2"',786,'3"',1571,'1.5"',575],
+[45,60,80,'AF52-30-11',5700,'AF52-30-11',5700,'AF40-30-11',5470,'TF65-47',3110,'-',null,'2(3x35/16)',2574,'2(3x16)/10',771,'2(3x35/16)',2220,'6x25/10',1055,'4"',2075,'2"',786,'3.5"',1807,'1.5"',575],
+[55,75,97,'AF65-30-11',7110,'AF65-30-11',7110,'AF40-30-11',5470,'TF65-60',3980,'-',null,'-',null,'2(3x25)/10',1155,'2(3x50/25)',2890,'6x35/10',1505,'-',null,'2.5"',1269,'4"',2075,'2"',786],
+[63,84,117,'AF80-30-11',7880,'AF80-30-11',7880,'AF52-30-11',5700,'TF96-78',4620,'-',null,'-',null,'2(3x35)/16',1475,'2x(3x35/16)',2220,'6x50/16',2085,'-',null,'2.5"',1269,'2x(2")',1572,'2.5"',1269],
+[70,94,125,'AF80-30-11',7880,'AF80-30-11',7880,'AF52-30-11',5700,'TF96-78',4620,'-',null,'-',null,'2(3x35)/16',1475,'2x(3x50/25)',2890,'6x50/16',2085,'-',null,'2.5"',1269,'2x(2.5")',2538,'2.5"',1269],
+[75,100,132,'AF80-30-11',7880,'AF80-30-11',7880,'AF52-30-11',5700,'TF96-78',4620,'-',null,'-',null,'2(3x50)/16',1949,'2x(3x50/25)',2890,'6x70/16',2589,'-',null,'2.5"',1269,'2x(2.5")',2538,'2.5"',1269],
+[90,125,160,'AF96-30-11',9250,'AF96-30-11',9250,'AF65-30-11',7110,'TF96-96',4990,'-',null,'-',null,'2(3x70)/16',2707,'2x(3x70/35)',4040,'6x70/16',2589,'-',null,'3"',1571,'2x(2.5")',2538,'2.5"',1269],
+[110,150,195,'AF116-30-11',12500,'AF116-30-11',12500,'AF116-30-11',12500,'TF140DU-135',8590,'-',null,'-',null,'2(3x70)/16',2707,'2x(3x95/50)',5566,'6x95/16',3531,'-',null,'3"',1571,'2x(3")',3142,'3"',1571],
+[132,180,230,'AF140-30-11B',18330,'AF140-30-11B',18330,'AF116-30-11',12500,'TF140DU-135',8590,'-',null,'-',null,'2(3x95)/25',3723,'2x(3x120/70)',7092,'6x120/25',4491,'-',null,'3.5"',1807,'2x(3")',3142,'3"',1571],
+[160,220,280,'AF190-30-11',23820,'AF190-30-11',23820,'AF140-30-11B',18330,'TA200DU175',10230,'-',null,'-',null,'2(3x150)/25',5733,'2x(3x185/95)',10806,'6x185/25',6855,'-',null,'4"',2075,'2x(3.5")',3614,'4"',2075],
+[200,270,350,'AF205-30-11',27580,'AF205-30-11',27580,'AF190-30-11',23820,'-',null,'EF205-210',26010,'-',null,'4(3x50)/25',3853,'2x(3x240/120)',14244,'12x70/25',5133,'-',null,'400mm',4401,'2x(4")',4150,'300mm',3830],
+[250,340,430,'AF265-30-11',42520,'AF265-30-11',42520,'AF205-30-11',27580,'-',null,'EF370-380',28950,'-',null,'4(3x70)/35',5426,'4(3x95/50)',11132,'12x95/35',6426,'-',null,'400mm',4401,'600mm',5270,'300mm',3830],
+[315,430,540,'AF370-30-11',53410,'AF370-30-11',53410,'AF265-30-11',42520,'-',null,'EF370-500',37340,'-',null,'4(3x95)/50',7408,'4(3x150/95)',17292,'12x120/50',8944,'-',null,'500mm',4754,'800mm',6224,'400mm',4401],
+[355,480,610,'AF370-30-11',53410,'AF370-30-11',53410,'AF305-30-11',47100,'-',null,'EF370-500',37340,'-',null,'4(3x120)/50',9344,'4(3x185/95)',21612,'12x150/50',10996,'-',null,'500mm',4754,'800mm',6224,'400mm',4401],
+[400,545,690,'AF460-30-11',71160,'AF460-30-11',71160,'AF400-30-11',55490,'-',null,'EF460-500',37340,'-',null,'4(3x150)/50',11428,'4(3x240/120)',28488,'12x185/50',13672,'-',null,'600mm',5270,'900mm',6696,'400mm',4401],
+];
+
+let selCable='cv', lastR=null;
+
+// Cable pick UI
+document.getElementById('cpicks').addEventListener('click', e => {
+  const p = e.target.closest('.cpick');
+  if (!p) return;
+  document.querySelectorAll('.cpick').forEach(x=>x.classList.remove('active'));
+  p.classList.add('active');
+  pickCable(p.dataset.v);
+});
+
+function pickCable(t) {
+  selCable = t;
+  document.querySelectorAll('.cpick').forEach(x => x.classList.toggle('active', x.dataset.v===t));
+  ['vct','cv','nyy','thw'].forEach(k => document.getElementById('pc-'+k).classList.toggle('sel', k===t));
+  if (lastR) renderBOQ(lastR, t);
+}
+
+function fmt(n) {
+  if (n==null||isNaN(n)) return '—';
+  return Number(n).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2});
+}
+
+function lookup(tbl, kw) {
+  let r = tbl[0];
+  for (const row of tbl) {
+    if (kw <= row[0]+0.001) { r=row; break; }
+    r = row;
+  }
+  return r;
+}
+
+function calculate() {
+  const kw  = parseFloat(document.getElementById('kw').value);
+  const dist= parseFloat(document.getElementById('dist').value);
+  const V   = parseFloat(document.getElementById('voltage').value);
+  const pf  = parseFloat(document.getElementById('pf').value);
+  const eff = parseFloat(document.getElementById('eff').value);
+  const mode= document.getElementById('mode').value;
+  const olt = document.getElementById('oltype').value;
+  if(!kw||!dist||!V||!pf||!eff){alert('กรุณากรอกข้อมูลให้ครบ');return;}
+
+  const Ifl = (kw*1000)/(Math.sqrt(3)*V*pf*eff);
+  document.getElementById('cur').textContent = Ifl.toFixed(2);
+  document.getElementById('cursub').textContent =
+    `HP: ${(kw*1.34102).toFixed(1)}  |  V: ${V}V  |  pF: ${pf}  |  EFF: ${eff}  |  I = kW×1000 ÷ (√3 × V × pF × EFF)`;
+
+  let r, comps, cables, conds;
+  if (mode==='sd') {
+    const row = lookup(SD, kw);
+    const olM = olt==='thermal' ? row[9] : row[11];
+    const olP = olt==='thermal' ? row[10]: row[12];
+    comps = [
+      {name:'Contactor MAIN (KM1)',  model:row[3], unit:'EA', price:row[4]},
+      {name:'Contactor DELTA (KM3)', model:row[5], unit:'EA', price:row[6]},
+      {name:'Contactor STAR (KM2)',  model:row[7], unit:'EA', price:row[8]},
+      {name:'Timer',                 model:'CT-ERC.12', unit:'EA', price:1790},
+      {name:`Overload (${olt==='thermal'?'Thermal':'Electronic'})`, model:olM||'-', unit:'EA', price:olP||0},
+    ];
+    cables  = {vct:{s:row[13],p:row[14]}, cv:{s:row[15],p:row[16]}, nyy:{s:row[17],p:row[18]}, thw:{s:row[19],p:row[20]}};
+    conds   = {vct:{s:row[21],p:row[22]}, cv:{s:row[23],p:row[24]}, nyy:{s:row[25],p:row[26]}, thw:{s:row[27],p:row[28]}};
+    r = {mode:'STAR-DELTA', kw, dist, V, pf, eff, Ifl, hp:row[1], A:row[2], comps, cables, conds};
+  } else {
+    const row = lookup(DOL, kw);
+    const olM = olt==='thermal' ? row[5] : row[7];
+    const olP = olt==='thermal' ? row[6] : row[8];
+    comps = [
+      {name:'Contactor MAIN', model:row[3], unit:'EA', price:row[4]},
+      {name:`Overload (${olt==='thermal'?'Thermal':'Electronic'})`, model:olM||'-', unit:'EA', price:olP||0},
+    ];
+    cables  = {vct:{s:row[9],p:row[10]}, cv:{s:row[11],p:row[12]}, nyy:{s:row[13],p:row[14]}, thw:{s:row[15],p:row[16]}};
+    conds   = {vct:{s:row[17],p:row[18]}, cv:{s:row[19],p:row[20]}, nyy:{s:row[21],p:row[22]}, thw:{s:row[23],p:row[24]}};
+    r = {mode:'DOL', kw, dist, V, pf, eff, Ifl, hp:row[1], A:row[2], comps, cables, conds};
+  }
+  lastR = r;
+
+  // totals
+  const tot = k => {
+    const cp=r.cables[k].p, dp=r.conds[k].p;
+    return (cp&&dp) ? (cp+dp)*dist : null;
+  };
+  const prices = {vct:tot('vct'), cv:tot('cv'), nyy:tot('nyy'), thw:tot('thw')};
+
+  ['vct','cv','nyy','thw'].forEach(k=>{
+    const el=document.getElementById('pv-'+k);
+    const pc=document.getElementById('pc-'+k);
+    pc.classList.remove('cheap-flag');
+    if(prices[k]==null){el.textContent='#VALUE!';el.className='pv err';}
+    else{el.textContent=fmt(prices[k]);el.className='pv';}
+  });
+  const valid=Object.entries(prices).filter(([,v])=>v!=null);
+  if(valid.length){
+    const mk=valid.reduce((a,b)=>b[1]<a[1]?b:a)[0];
+    document.getElementById('pc-'+mk).classList.add('cheap-flag');
+  }
+  const maxP=Math.max(...valid.map(([,v])=>v),1);
+  ['vct','cv','nyy','thw'].forEach(k=>{
+    const h=prices[k]?Math.max(4,(prices[k]/maxP)*64):3;
+    document.getElementById('b-'+k).style.height=h+'px';
+  });
+
+  renderComps(r);
+  renderBOQ(r, selCable);
+}
+
+function renderComps(r) {
+  const crows = r.comps.map(c=>`
+    <tr>
+      <td class="rn">${c.name}</td>
+      <td class="rm">${c.model||'-'}</td>
+      <td class="ru">${c.unit}</td>
+      <td class="rp">${c.price?fmt(c.price):'—'}</td>
+    </tr>`).join('');
+  const crow=`
+    <tr class="rsec"><td colspan="4"><span class="rslbl">ค่าไฟฟ้า</span></td></tr>
+    <tr><td class="rn">กระแสเต็มพิกัด (Ifl)</td><td class="rm">${r.Ifl.toFixed(4)}</td><td class="ru">A</td><td class="rp">${r.hp} HP / ${r.A} A (ตาราง)</td></tr>`;
+  const srow=`
+    <tr class="rsec"><td colspan="4"><span class="rslbl">สายไฟ (฿/เมตร)</span></td></tr>
+    <tr><td class="rn">สาย VCT3/C-G</td><td class="rm">${r.cables.vct.s||'-'}</td><td class="ru">/m</td><td class="rp ${!r.cables.vct.p?'err':''}">${r.cables.vct.p?fmt(r.cables.vct.p):'#VALUE!'}</td></tr>
+    <tr><td class="rn">สาย CV3/C+THW(G)</td><td class="rm">${r.cables.cv.s||'-'}</td><td class="ru">/m</td><td class="rp">${fmt(r.cables.cv.p)}</td></tr>
+    <tr><td class="rn">สาย NYY3/C-G</td><td class="rm">${r.cables.nyy.s||'-'}</td><td class="ru">/m</td><td class="rp">${fmt(r.cables.nyy.p)}</td></tr>
+    <tr><td class="rn">สาย THW</td><td class="rm">${r.cables.thw.s||'-'}</td><td class="ru">/m</td><td class="rp">${fmt(r.cables.thw.p)}</td></tr>
+    <tr class="rsec"><td colspan="4"><span class="rslbl">ท่อ/ราง IMC (฿/เส้น)</span></td></tr>
+    <tr><td class="rn">ท่อ VCT3/C-G</td><td class="rm">${r.conds.vct.s||'-'}</td><td class="ru">In/m</td><td class="rp ${!r.conds.vct.p?'err':''}">${r.conds.vct.p?fmt(r.conds.vct.p):'#VALUE!'}</td></tr>
+    <tr><td class="rn">ท่อ CV3/C+THW(G)</td><td class="rm">${r.conds.cv.s||'-'}</td><td class="ru">In/m</td><td class="rp">${fmt(r.conds.cv.p)}</td></tr>
+    <tr><td class="rn">ท่อ NYY3/C-G</td><td class="rm">${r.conds.nyy.s||'-'}</td><td class="ru">In/m</td><td class="rp">${fmt(r.conds.nyy.p)}</td></tr>
+    <tr><td class="rn">ท่อ THW</td><td class="rm">${r.conds.thw.s||'-'}</td><td class="ru">In/m</td><td class="rp">${fmt(r.conds.thw.p)}</td></tr>`;
+  document.getElementById('comp-area').innerHTML=`
+    <table class="rtable">
+      <thead><tr><th>รายการ</th><th>ค่า/รุ่น</th><th>หน่วย</th><th style="text-align:right">ราคา/หน่วย (฿)</th></tr></thead>
+      <tbody>${crow}
+      <tr class="rsec"><td colspan="4"><span class="rslbl">อุปกรณ์ชุดสตาร์ท</span></td></tr>
+      ${crows}${srow}</tbody>
+    </table>`;
+}
+
+function renderBOQ(r, ck) {
+  const names={vct:'VCT3/C-G', cv:'CV3/C+THW(G)', nyy:'NYY3/C-G', thw:'THW'};
+  const cab=r.cables[ck], cond=r.conds[ck];
+  const compSub=r.comps.reduce((s,c)=>s+(c.price||0),0);
+  const cabT=cab.p?cab.p*r.dist:null;
+  const conT=cond.p?cond.p*r.dist:null;
+  const ccsub=(cabT&&conT)?cabT+conT:null;
+  const grand=ccsub?compSub+ccsub:null;
+  const crow=r.comps.map((c,i)=>`
+    <tr>
+      <td class="bd">${i+1}. ${c.name} <span style="color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:10.5px">${c.model||'-'}</span></td>
+      <td class="bn">1</td><td>EA</td>
+      <td class="bp">${fmt(c.price)}</td>
+      <td class="bt">${fmt(c.price)}</td>
+    </tr>`).join('');
+  document.getElementById('boq-area').innerHTML=`
+    <table class="boqt">
+      <thead><tr><th>รายการ</th><th style="text-align:right">จำนวน</th><th>หน่วย</th><th style="text-align:right">ราคา/หน่วย</th><th style="text-align:right">จำนวนเงิน (฿)</th></tr></thead>
+      <tbody>
+        <tr class="bsub"><td colspan="5" style="color:var(--yellow);font-size:10.5px;font-weight:800;letter-spacing:1px">1. ตู้ชุดสตาร์ท (${r.mode})</td></tr>
+        ${crow}
+        <tr class="bsum"><td colspan="4" style="font-size:12px;color:var(--text2)">รวมอุปกรณ์ชุดสตาร์ท</td><td class="bt">${fmt(compSub)}</td></tr>
+        <tr class="bsub"><td colspan="5" style="color:var(--yellow);font-size:10.5px;font-weight:800;letter-spacing:1px;padding-top:9px">2. งานพาดสายและเดินสาย (${names[ck]})</td></tr>
+        <tr>
+          <td class="bd">สาย ${names[ck]} <span style="color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:10.5px">${cab.s||'-'}</span></td>
+          <td class="bn">${r.dist}</td><td>M.</td>
+          <td class="bp">${cab.p?fmt(cab.p):'#VALUE!'}</td>
+          <td class="bt">${cabT?fmt(cabT):'#VALUE!'}</td>
+        </tr>
+        <tr>
+          <td class="bd">ท่อ IMC <span style="color:var(--cyan);font-family:'IBM Plex Mono',monospace;font-size:10.5px">${cond.s||'-'}</span></td>
+          <td class="bn">${r.dist}</td><td>M.</td>
+          <td class="bp">${cond.p?fmt(cond.p):'#VALUE!'}</td>
+          <td class="bt">${conT?fmt(conT):'#VALUE!'}</td>
+        </tr>
+        <tr class="bsum"><td colspan="4" style="font-size:12px;color:var(--text2)">รวมงานสายและท่อ</td><td class="bt">${ccsub?fmt(ccsub):'#VALUE!'}</td></tr>
+        <tr style="background:rgba(59,130,246,0.08);border-top:1px solid rgba(59,130,246,0.2)">
+          <td colspan="4" style="font-weight:800;font-size:13px;color:var(--accent)">🔷 Total Item</td>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:800;color:#fff;text-align:right;padding:9px 11px">${grand?fmt(grand):'#VALUE!'}</td>
+        </tr>
+        <tr><td colspan="4" style="color:var(--text2);font-size:11.5px">Safety Equipment (5%)</td><td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text2);text-align:right">${grand?fmt(grand*0.05):'—'}</td></tr>
+        <tr><td colspan="4" style="color:var(--text2);font-size:11.5px">Miscellaneous Work (5%)</td><td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text2);text-align:right">${grand?fmt(grand*0.05):'—'}</td></tr>
+        <tr><td colspan="4" style="color:var(--text2);font-size:11.5px">Overhead &amp; Profit (10%)</td><td style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--text2);text-align:right">${grand?fmt(grand*0.10):'—'}</td></tr>
+        <tr style="background:rgba(16,185,129,0.09);border-top:1px solid rgba(16,185,129,0.28)">
+          <td colspan="4" style="font-weight:800;font-size:13px;color:var(--green)">✅ Grand Total (รวมสุทธิ)</td>
+          <td style="font-family:'IBM Plex Mono',monospace;font-size:15px;font-weight:800;color:var(--green);text-align:right;padding:9px 11px">${grand?fmt(grand*1.2):'#VALUE!'}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="padding:11px 13px;font-size:11px;color:var(--text3)">
+      ⚠️ ยังไม่รวมค่าแรง &amp; ราคามอเตอร์ &nbsp;·&nbsp; สายที่เลือก: <b style="color:var(--accent)">${names[ck]}</b> &nbsp;·&nbsp; ระยะ: <b style="color:var(--accent)">${r.dist} m</b>
+    </div>`;
+}
+
+window.onload=()=>{calculate();pickCable('cv');};
+</script>
+</body>
+</html>
