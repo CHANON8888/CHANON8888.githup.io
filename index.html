@@ -63,7 +63,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
 .irow label { font-size:12.5px; color:var(--text2); font-weight:500; }
 .irow input, .irow select { background:var(--input); border:1px solid var(--border); border-radius:7px; padding:8px 10px; font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--text); outline:none; width:100%; transition:border-color .15s, box-shadow .15s; }
 .irow input:focus, .irow select:focus { border-color:var(--accent); box-shadow:0 0 0 3px rgba(59,130,246,0.12); }
-.irow input.bin { background:var(--blue-in); border-color:rgba(59,130,246,0.3); color:#93c5fd; }
+.irow input.bin, .irow select.bin { background:var(--blue-in); border-color:rgba(59,130,246,0.3); color:#93c5fd; }
 .irow select option { background:#1a2234; }
 .irow .unit { font-size:11.5px; color:var(--text3); font-family:'IBM Plex Mono',monospace; }
 .divider { height:1px; background:var(--border2); margin:12px 0; }
@@ -75,6 +75,9 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
 .curbox .big { font-family:'IBM Plex Mono',monospace; font-size:26px; font-weight:600; color:#fff; }
 .curbox .u2 { font-size:13px; color:var(--text2); }
 .curbox .sub { font-size:11px; color:var(--text2); margin-top:4px; line-height:1.5; }
+
+/* RATED CURRENT BADGE */
+.rated-badge { display:inline-flex; align-items:center; gap:5px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.25); border-radius:6px; padding:4px 9px; font-size:11px; color:var(--yellow); font-family:'IBM Plex Mono',monospace; margin-top:6px; }
 
 /* CABLE PICK */
 .cpicks { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
@@ -162,6 +165,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
   <div class="ticon">⚡</div>
   <div>
     <h1>แบบคำนวณมอเตอร์อัตโนมัติ</h1>
+    <p>อ้างอิงตารางราคาจริงจาก Excel · Motor Sizing &amp; Cable Selection Calculator</p>
   </div>
   <div class="tags">
     <span class="tag blue">DOL</span>
@@ -180,6 +184,8 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
     </div>
     <div class="cbody">
       <div class="slbl">พารามิเตอร์หลัก</div>
+
+      <!-- CHANGE #2: kW dropdown instead of free-text input -->
       <div class="irow">
         <label>มอเตอร์ (kW)</label>
         <select id="kw" class="bin">
@@ -209,7 +215,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
           <option value="90">90</option>
           <option value="110">110</option>
           <option value="132">132</option>
-          <option value="160">160</option>
+          <option value="160" selected>160</option>
           <option value="200">200</option>
           <option value="250">250</option>
           <option value="315">315</option>
@@ -218,6 +224,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
         </select>
         <span class="unit">kW</span>
       </div>
+
       <div class="irow">
         <label>ระยะสาย</label>
         <input type="number" id="dist" value="100" class="bin" min="1">
@@ -261,6 +268,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
       <div class="curbox">
         <div class="cl">🔌 กระแสเต็มพิกัด (Full Load Current)</div>
         <div class="vrow"><span class="big" id="cur">—</span><span class="u2">A</span></div>
+        <div id="rated-badge-area"></div>
         <div class="sub" id="cursub">กรอกข้อมูลแล้วกดคำนวณ</div>
       </div>
 
@@ -351,7 +359,7 @@ body::after { content:''; position:fixed; inset:0; pointer-events:none; z-index:
 
 <script>
 // =====================================================================
-// DATA — อ้างอิงจาก Excel แบบคำนวณมอเตอร์.xlsx (DOL sheet & Star-Delta sheet)
+// DATA — อ้างอิงจาก Excel แบบคำนวณมอเตอร์.xlsx
 // DOL columns: [kW, HP, A, cont_m, cont_p, olT_m, olT_p, olE_m, olE_p,
 //   vct_s, vct_p, cv_s, cv_p, nyy_s, nyy_p, thw_s, thw_p,
 //   cVct_s, cVct_p, cCv_s, cCv_p, cNyy_s, cNyy_p, cThw_s, cThw_p]
@@ -419,6 +427,30 @@ const SD=[
 [400,545,690,'AF460-30-11',71160,'AF460-30-11',71160,'AF400-30-11',55490,'-',null,'EF460-500',37340,'-',null,'4(3x150)/50',11428,'4(3x240/120)',28488,'12x185/50',13672,'-',null,'600mm',5270,'900mm',6696,'400mm',4401],
 ];
 
+// =====================================================================
+// Star-Delta standard rated-current reference table (from user spec)
+// Ceiling lookup: after Ifl ÷ √3, round UP to next value in this list
+const SD_RATED_TABLE = [
+  8.5, 11.5, 15.5, 22, 29, 35, 41, 47, 66, 80,
+  97, 117, 125, 132, 160, 195, 230, 280, 340, 350,
+  408, 430, 540, 610, 690, 850, 1200
+];
+
+// DOL standard rated-current table (from Excel DOL sheet A-column)
+const DOL_RATED_TABLE = [
+  0.2, 0.3, 0.44, 0.85, 1.1, 1.5, 1.9, 2.7, 3.6, 4.9,
+  6.5, 8.5, 11.5, 15.5, 22, 29, 35, 41, 55, 66,
+  80, 97, 132, 160, 195, 230, 280, 350, 430, 540, 610, 690
+];
+
+// Ceiling lookup: find the smallest standard rating >= val in the given table
+function ratedCurrentCeiling(val, table) {
+  for (const rating of table) {
+    if (val <= rating) return rating;
+  }
+  return table[table.length - 1];
+}
+
 let selCable='cv', lastR=null;
 
 // Cable pick UI
@@ -442,10 +474,21 @@ function fmt(n) {
   return Number(n).toLocaleString('th-TH',{minimumFractionDigits:0,maximumFractionDigits:2});
 }
 
+// Lookup row by kW (fallback, not used for component selection)
 function lookup(tbl, kw) {
   let r = tbl[0];
   for (const row of tbl) {
     if (kw <= row[0]+0.001) { r=row; break; }
+    r = row;
+  }
+  return r;
+}
+
+// Lookup row by rated current (ceiling-rounded A) — col index 2
+function lookupByA(tbl, ratedA) {
+  let r = tbl[0];
+  for (const row of tbl) {
+    if (ratedA <= row[2] + 0.001) { r = row; break; }
     r = row;
   }
   return r;
@@ -461,14 +504,38 @@ function calculate() {
   const olt = document.getElementById('oltype').value;
   if(!kw||!dist||!V||!pf||!eff){alert('กรุณากรอกข้อมูลให้ครบ');return;}
 
-  const Ifl = (kw*1000)/(Math.sqrt(3)*V*pf*eff);
-  document.getElementById('cur').textContent = Ifl.toFixed(2);
-  document.getElementById('cursub').textContent =
-    `HP: ${(kw*1.34102).toFixed(1)}  |  V: ${V}V  |  pF: ${pf}  |  EFF: ${eff}  |  I = kW×1000 ÷ (√3 × V × pF × EFF)`;
+  // Step 1: Full Load Current (3-phase formula)
+  const Ifl = (kw * 1000) / (Math.sqrt(3) * V * pf * eff);
+
+  // Step 2: Star-Delta — phase current is Ifl ÷ √3
+  //   DOL: working current = Ifl
+  //   Star-Delta: working current = Ifl ÷ √3  (phase current in star winding)
+  const Iwork = (mode === 'sd') ? (Ifl / Math.sqrt(3)) : Ifl;
+
+  // Step 3: Ceiling lookup — use SD table for Star-Delta, DOL table otherwise
+  const ratedA = (mode === 'sd')
+    ? ratedCurrentCeiling(Iwork, SD_RATED_TABLE)
+    : ratedCurrentCeiling(Iwork, DOL_RATED_TABLE);
+
+  // Display: Star-Delta shows the phase current (Iwork) as the primary figure;
+  //          DOL shows Ifl directly.
+  document.getElementById('cur').textContent = (mode === 'sd') ? Iwork.toFixed(2) : Ifl.toFixed(2);
+
+  if (mode === 'sd') {
+    document.getElementById('rated-badge-area').innerHTML =
+      `<div class="rated-badge">⚡ Ifl = ${Ifl.toFixed(2)} A &nbsp;÷ √3&nbsp; = ${Iwork.toFixed(2)} A &nbsp;→&nbsp; พิกัดมาตรฐาน: ${ratedA} A</div>`;
+    document.getElementById('cursub').textContent =
+      `HP: ${(kw*1.34102).toFixed(1)}  |  V: ${V}V  |  pF: ${pf}  |  EFF: ${eff}  |  Ifl = ${Ifl.toFixed(2)} A  →  I_phase (Star) = Ifl ÷ √3 = ${Iwork.toFixed(2)} A  →  พิกัด: ${ratedA} A`;
+  } else {
+    document.getElementById('rated-badge-area').innerHTML =
+      `<div class="rated-badge">📌 พิกัดมาตรฐาน (ceiling): ${ratedA} A</div>`;
+    document.getElementById('cursub').textContent =
+      `HP: ${(kw*1.34102).toFixed(1)}  |  V: ${V}V  |  pF: ${pf}  |  EFF: ${eff}  |  I = kW×1000 ÷ (√3 × V × pF × EFF) = ${Ifl.toFixed(2)} A  →  พิกัด: ${ratedA} A`;
+  }
 
   let r, comps, cables, conds;
   if (mode==='sd') {
-    const row = lookup(SD, kw);
+    const row = lookupByA(SD, ratedA);
     const olM = olt==='thermal' ? row[9] : row[11];
     const olP = olt==='thermal' ? row[10]: row[12];
     comps = [
@@ -480,9 +547,10 @@ function calculate() {
     ];
     cables  = {vct:{s:row[13],p:row[14]}, cv:{s:row[15],p:row[16]}, nyy:{s:row[17],p:row[18]}, thw:{s:row[19],p:row[20]}};
     conds   = {vct:{s:row[21],p:row[22]}, cv:{s:row[23],p:row[24]}, nyy:{s:row[25],p:row[26]}, thw:{s:row[27],p:row[28]}};
-    r = {mode:'STAR-DELTA', kw, dist, V, pf, eff, Ifl, hp:row[1], A:row[2], comps, cables, conds};
+    // Star-Delta: Iwork = Ifl/√3 is the phase current used for ceiling lookup
+    r = {mode:'STAR-DELTA', kw, dist, V, pf, eff, Ifl, Iwork, ratedA, hp:row[1], A:row[2], comps, cables, conds};
   } else {
-    const row = lookup(DOL, kw);
+    const row = lookupByA(DOL, ratedA);
     const olM = olt==='thermal' ? row[5] : row[7];
     const olP = olt==='thermal' ? row[6] : row[8];
     comps = [
@@ -491,7 +559,7 @@ function calculate() {
     ];
     cables  = {vct:{s:row[9],p:row[10]}, cv:{s:row[11],p:row[12]}, nyy:{s:row[13],p:row[14]}, thw:{s:row[15],p:row[16]}};
     conds   = {vct:{s:row[17],p:row[18]}, cv:{s:row[19],p:row[20]}, nyy:{s:row[21],p:row[22]}, thw:{s:row[23],p:row[24]}};
-    r = {mode:'DOL', kw, dist, V, pf, eff, Ifl, hp:row[1], A:row[2], comps, cables, conds};
+    r = {mode:'DOL', kw, dist, V, pf, eff, Ifl, Iwork:Ifl, ratedA, hp:row[1], A:row[2], comps, cables, conds};
   }
   lastR = r;
 
@@ -532,9 +600,17 @@ function renderComps(r) {
       <td class="ru">${c.unit}</td>
       <td class="rp">${c.price?fmt(c.price):'—'}</td>
     </tr>`).join('');
+
+  // Show current breakdown rows — SD shows full chain: Ifl → Iwork → ceiling
+  const iworkRow = r.mode==='STAR-DELTA'
+    ? `<tr><td class="rn">กระแสเฟส Star (Ifl ÷ √3)</td><td class="rm">${r.Iwork.toFixed(4)}</td><td class="ru">A</td><td class="rp" style="color:var(--yellow)">${r.Iwork.toFixed(2)} A ← ใช้ lookup</td></tr>`
+    : '';
   const crow=`
     <tr class="rsec"><td colspan="4"><span class="rslbl">ค่าไฟฟ้า</span></td></tr>
-    <tr><td class="rn">กระแสเต็มพิกัด (Ifl)</td><td class="rm">${r.Ifl.toFixed(4)}</td><td class="ru">A</td><td class="rp">${r.hp} HP / ${r.A} A (ตาราง)</td></tr>`;
+    <tr><td class="rn">กระแสเต็มพิกัด (Ifl)</td><td class="rm">${r.Ifl.toFixed(4)}</td><td class="ru">A</td><td class="rp">${r.hp} HP / ${r.A} A (ตาราง)</td></tr>
+    ${iworkRow}
+    <tr><td class="rn">พิกัดมาตรฐาน (Ceiling lookup)</td><td class="rm">${r.ratedA}</td><td class="ru">A</td><td class="rp" style="color:var(--cyan)">↑ ปัดขึ้นมาตรฐาน</td></tr>`;
+
   const srow=`
     <tr class="rsec"><td colspan="4"><span class="rslbl">สายไฟ (฿/เมตร)</span></td></tr>
     <tr><td class="rn">สาย VCT3/C-G</td><td class="rm">${r.cables.vct.s||'-'}</td><td class="ru">/m</td><td class="rp ${!r.cables.vct.p?'err':''}">${r.cables.vct.p?fmt(r.cables.vct.p):'#VALUE!'}</td></tr>
@@ -570,10 +646,17 @@ function renderBOQ(r, ck) {
       <td class="bp">${fmt(c.price)}</td>
       <td class="bt">${fmt(c.price)}</td>
     </tr>`).join('');
+
+  // Star-Delta note in BOQ — shows the full calculation chain
+  const sdNote = r.mode==='STAR-DELTA'
+    ? `<tr><td colspan="5" style="padding:6px 11px;font-size:11px;color:var(--yellow);background:rgba(245,158,11,0.04)">⚡ Star-Delta: Ifl = ${r.Ifl.toFixed(2)} A &nbsp;÷ √3&nbsp; = I_phase <b>${r.Iwork.toFixed(2)} A</b> &nbsp;→&nbsp; พิกัดมาตรฐาน: <b>${r.ratedA} A</b></td></tr>`
+    : `<tr><td colspan="5" style="padding:6px 11px;font-size:11px;color:var(--text3);background:rgba(59,130,246,0.04)">DOL: Ifl = ${r.Ifl.toFixed(2)} A &nbsp;→&nbsp; พิกัดมาตรฐาน: <b>${r.ratedA} A</b></td></tr>`;
+
   document.getElementById('boq-area').innerHTML=`
     <table class="boqt">
       <thead><tr><th>รายการ</th><th style="text-align:right">จำนวน</th><th>หน่วย</th><th style="text-align:right">ราคา/หน่วย</th><th style="text-align:right">จำนวนเงิน (฿)</th></tr></thead>
       <tbody>
+        ${sdNote}
         <tr class="bsub"><td colspan="5" style="color:var(--yellow);font-size:10.5px;font-weight:800;letter-spacing:1px">1. ตู้ชุดสตาร์ท (${r.mode})</td></tr>
         ${crow}
         <tr class="bsum"><td colspan="4" style="font-size:12px;color:var(--text2)">รวมอุปกรณ์ชุดสตาร์ท</td><td class="bt">${fmt(compSub)}</td></tr>
